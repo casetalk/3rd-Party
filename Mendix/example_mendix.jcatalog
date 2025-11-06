@@ -1,0 +1,378 @@
+{
+    "connection": {
+        "catalogs": [
+            {
+                "name": "mendix_example",
+                "schemas": [
+                    {
+                        "name": "public",
+                        "tables": [
+                            {
+                                "name": "mymodule$customer",
+                                "annotation": "Customer entity from MyModule",
+                                "columns": [
+                                    {
+                                        "name": "id",
+                                        "metadata": {
+                                            "type": "BIGINT",
+                                            "size": 19,
+                                            "nullable": false,
+                                            "annotation": "Primary key identifier"
+                                        }
+                                    },
+                                    {
+                                        "name": "firstname",
+                                        "metadata": {
+                                            "type": "VARCHAR",
+                                            "size": 200,
+                                            "nullable": true,
+                                            "annotation": "Customer first name"
+                                        }
+                                    },
+                                    {
+                                        "name": "lastname",
+                                        "metadata": {
+                                            "type": "VARCHAR",
+                                            "size": 200,
+                                            "nullable": true,
+                                            "annotation": "Customer last name"
+                                        }
+                                    },
+                                    {
+                                        "name": "email",
+                                        "metadata": {
+                                            "type": "VARCHAR",
+                                            "size": 255,
+                                            "nullable": true,
+                                            "annotation": "Email address (unique)"
+                                        }
+                                    },
+                                    {
+                                        "name": "dateofbirth",
+                                        "metadata": {
+                                            "type": "DATE",
+                                            "size": 10,
+                                            "nullable": true
+                                        }
+                                    },
+                                    {
+                                        "name": "mymodule$customer_address",
+                                        "metadata": {
+                                            "type": "BIGINT",
+                                            "size": 19,
+                                            "nullable": true,
+                                            "annotation": "Foreign key to Address (association)"
+                                        }
+                                    }
+                                ],
+                                "primarykey": {
+                                    "columns": [
+                                        {
+                                            "column": "id",
+                                            "position": "1"
+                                        }
+                                    ]
+                                },
+                                "foreignkeys": [
+                                    {
+                                        "name": "FK_Customer_Address",
+                                        "referencedTable": "mymodule$address",
+                                        "referencedSchema": "public",
+                                        "columns": [
+                                            {
+                                                "column": "mymodule$customer_address",
+                                                "referencedColumn": "id",
+                                                "position": "1"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "mymodule$address",
+                                "annotation": "Address entity from MyModule",
+                                "columns": [
+                                    {
+                                        "name": "id",
+                                        "metadata": {
+                                            "type": "BIGINT",
+                                            "size": 19,
+                                            "nullable": false
+                                        }
+                                    },
+                                    {
+                                        "name": "street",
+                                        "metadata": {
+                                            "type": "VARCHAR",
+                                            "size": 255,
+                                            "nullable": true
+                                        }
+                                    },
+                                    {
+                                        "name": "city",
+                                        "metadata": {
+                                            "type": "VARCHAR",
+                                            "size": 200,
+                                            "nullable": true
+                                        }
+                                    },
+                                    {
+                                        "name": "zipcode",
+                                        "metadata": {
+                                            "type": "VARCHAR",
+                                            "size": 20,
+                                            "nullable": true
+                                        }
+                                    },
+                                    {
+                                        "name": "country",
+                                        "metadata": {
+                                            "type": "VARCHAR",
+                                            "size": 100,
+                                            "nullable": true
+                                        }
+                                    }
+                                ],
+                                "primarykey": {
+                                    "columns": [
+                                        {
+                                            "column": "id",
+                                            "position": "1"
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "mymodule$order",
+                                "annotation": "Order entity from MyModule",
+                                "columns": [
+                                    {
+                                        "name": "id",
+                                        "metadata": {
+                                            "type": "BIGINT",
+                                            "size": 19,
+                                            "nullable": false
+                                        }
+                                    },
+                                    {
+                                        "name": "ordernumber",
+                                        "metadata": {
+                                            "type": "VARCHAR",
+                                            "size": 50,
+                                            "nullable": false,
+                                            "annotation": "Unique order number"
+                                        }
+                                    },
+                                    {
+                                        "name": "orderdate",
+                                        "metadata": {
+                                            "type": "TIMESTAMP",
+                                            "size": 26,
+                                            "nullable": false,
+                                            "default": "CURRENT_TIMESTAMP"
+                                        }
+                                    },
+                                    {
+                                        "name": "totalamount",
+                                        "metadata": {
+                                            "type": "DECIMAL",
+                                            "size": 18,
+                                            "nullable": true,
+                                            "annotation": "Total order amount in currency"
+                                        }
+                                    },
+                                    {
+                                        "name": "mymodule$order_customer",
+                                        "metadata": {
+                                            "type": "BIGINT",
+                                            "size": 19,
+                                            "nullable": false,
+                                            "annotation": "Foreign key to Customer (association)"
+                                        }
+                                    }
+                                ],
+                                "primarykey": {
+                                    "columns": [
+                                        {
+                                            "column": "id",
+                                            "position": "1"
+                                        }
+                                    ]
+                                },
+                                "foreignkeys": [
+                                    {
+                                        "name": "FK_Order_Customer",
+                                        "referencedTable": "mymodule$customer",
+                                        "referencedSchema": "public",
+                                        "columns": [
+                                            {
+                                                "column": "mymodule$order_customer",
+                                                "referencedColumn": "id",
+                                                "position": "1"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "mymodule$orderline",
+                                "annotation": "OrderLine entity (order details)",
+                                "columns": [
+                                    {
+                                        "name": "id",
+                                        "metadata": {
+                                            "type": "BIGINT",
+                                            "size": 19,
+                                            "nullable": false
+                                        }
+                                    },
+                                    {
+                                        "name": "linenumber",
+                                        "metadata": {
+                                            "type": "INTEGER",
+                                            "size": 10,
+                                            "nullable": false
+                                        }
+                                    },
+                                    {
+                                        "name": "quantity",
+                                        "metadata": {
+                                            "type": "INTEGER",
+                                            "size": 10,
+                                            "nullable": false,
+                                            "default": "1"
+                                        }
+                                    },
+                                    {
+                                        "name": "unitprice",
+                                        "metadata": {
+                                            "type": "DECIMAL",
+                                            "size": 18,
+                                            "nullable": false
+                                        }
+                                    },
+                                    {
+                                        "name": "mymodule$orderline_order",
+                                        "metadata": {
+                                            "type": "BIGINT",
+                                            "size": 19,
+                                            "nullable": false,
+                                            "annotation": "Foreign key to Order"
+                                        }
+                                    },
+                                    {
+                                        "name": "mymodule$orderline_product",
+                                        "metadata": {
+                                            "type": "BIGINT",
+                                            "size": 19,
+                                            "nullable": false,
+                                            "annotation": "Foreign key to Product"
+                                        }
+                                    }
+                                ],
+                                "primarykey": {
+                                    "columns": [
+                                        {
+                                            "column": "id",
+                                            "position": "1"
+                                        }
+                                    ]
+                                },
+                                "foreignkeys": [
+                                    {
+                                        "name": "FK_OrderLine_Order",
+                                        "referencedTable": "mymodule$order",
+                                        "referencedSchema": "public",
+                                        "columns": [
+                                            {
+                                                "column": "mymodule$orderline_order",
+                                                "referencedColumn": "id",
+                                                "position": "1"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "name": "FK_OrderLine_Product",
+                                        "referencedTable": "mymodule$product",
+                                        "referencedSchema": "public",
+                                        "columns": [
+                                            {
+                                                "column": "mymodule$orderline_product",
+                                                "referencedColumn": "id",
+                                                "position": "1"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "mymodule$product",
+                                "annotation": "Product catalog entity",
+                                "columns": [
+                                    {
+                                        "name": "id",
+                                        "metadata": {
+                                            "type": "BIGINT",
+                                            "size": 19,
+                                            "nullable": false
+                                        }
+                                    },
+                                    {
+                                        "name": "productcode",
+                                        "metadata": {
+                                            "type": "VARCHAR",
+                                            "size": 50,
+                                            "nullable": false,
+                                            "annotation": "Unique product code/SKU"
+                                        }
+                                    },
+                                    {
+                                        "name": "name",
+                                        "metadata": {
+                                            "type": "VARCHAR",
+                                            "size": 255,
+                                            "nullable": false
+                                        }
+                                    },
+                                    {
+                                        "name": "description",
+                                        "metadata": {
+                                            "type": "TEXT",
+                                            "size": 2147483647,
+                                            "nullable": true
+                                        }
+                                    },
+                                    {
+                                        "name": "price",
+                                        "metadata": {
+                                            "type": "DECIMAL",
+                                            "size": 18,
+                                            "nullable": false
+                                        }
+                                    },
+                                    {
+                                        "name": "stockquantity",
+                                        "metadata": {
+                                            "type": "INTEGER",
+                                            "size": 10,
+                                            "nullable": true,
+                                            "default": "0"
+                                        }
+                                    }
+                                ],
+                                "primarykey": {
+                                    "columns": [
+                                        {
+                                            "column": "id",
+                                            "position": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
