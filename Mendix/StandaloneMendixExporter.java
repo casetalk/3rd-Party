@@ -215,6 +215,9 @@ public class StandaloneMendixExporter
 
         System.out.println("Found " + schemaTableMap.size() + " schema(s)");
 
+        // Track junction tables to convert to associations
+        List<JSONObject> junctionTableAssociations = new ArrayList<>();
+
         // Get all tables for each schema
         int totalTables = 0;
         for (String schemaName : schemaTableMap.keySet())
@@ -236,9 +239,20 @@ public class StandaloneMendixExporter
                     String tableName = tableRs.getString("TABLE_NAME");
 
                     // Filter out system tables unless explicitly requested
-                    if (!includeSystemTables && isSystemTable(tableName))
+                    if (!includeSystemTables && (isSystemTable(tableName) || isMendixSystemTable(tableName)))
                     {
                         continue;
+                    }
+
+                    // Check if this is a Mendix junction table (many-to-many)
+                    if (isJunctionTable(tableName, metaData, catalogName, schemaName))
+                    {
+                        // Convert to association instead of table
+                        System.out.println("  Detected junction table: " + tableName + " (converting to association)");
+                        JSONObject association = junctionTableToAssociation(
+                            tableName, metaData, catalogName, schemaName);
+                        junctionTableAssociations.add(association);
+                        continue; // Don't add as table
                     }
 
                     System.out.println("  Processing table: " + tableName);
@@ -284,6 +298,19 @@ public class StandaloneMendixExporter
             if (tables.length() > 0)
             {
                 schema.put("tables", tables);
+
+                // Add associations (converted junction tables)
+                if (!junctionTableAssociations.isEmpty())
+                {
+                    JSONArray associations = new JSONArray();
+                    for (JSONObject assoc : junctionTableAssociations)
+                    {
+                        associations.put(assoc);
+                    }
+                    schema.put("associations", associations);
+                    System.out.println("Added " + associations.length() + " associations from junction tables");
+                }
+
                 schemas.put(schema);
             }
         }
@@ -470,5 +497,140 @@ public class StandaloneMendixExporter
                lower.startsWith("msrep") ||
                lower.startsWith("dt") ||
                lower.startsWith("$");
+    }
+
+    /**
+     * Check if table is a Mendix-specific system table
+     * Enhanced filtering for Mendix system and technical modules
+     */
+    private boolean isMendixSystemTable(String tableName)
+    {
+        if (tableName == null) return false;
+
+        String lower = tableName.toLowerCase();
+
+        // Mendix system module (authentication, sessions, users, etc.)
+        if (lower.startsWith("system$")) return true;
+
+        // Mendix administration module
+        if (lower.startsWith("administration$")) return true;
+
+        // Common technical modules from Mendix Marketplace
+        String[] techModules = {
+            "mx",                    // Mendix internal
+            "deeplink$",            // Deep link module
+            "encryption$",          // Encryption module
+            "email$",               // Email connector
+            "audittrail$",          // Audit trail module
+            "modelreflection$",     // Model reflection module
+            "communitycommons$"     // Community commons
+        };
+
+        for (String module : techModules)
+        {
+            if (lower.startsWith(module)) return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Detect if a table is a Mendix junction table for many-to-many relationships
+     *
+     * Junction tables have:
+     * 1. Name format: module$entity1_entity2
+     * 2. Exactly two foreign keys
+     * 3. Typically a composite primary key
+     */
+    private boolean isJunctionTable(String tableName, DatabaseMetaData metaData,
+                                    String catalog, String schema) throws SQLException
+    {
+        // Must have Mendix naming pattern
+        if (!tableName.contains("$") || !tableName.contains("_"))
+        {
+            return false;
+        }
+
+        // Count foreign keys
+        ResultSet fkRs = metaData.getImportedKeys(catalog, schema, tableName);
+        int fkCount = 0;
+
+        try
+        {
+            while (fkRs.next())
+            {
+                fkCount++;
+            }
+        }
+        finally
+        {
+            fkRs.close();
+        }
+
+        // Junction tables have exactly 2 foreign keys
+        return fkCount == 2;
+    }
+
+    /**
+     * Convert junction table to semantic association
+     */
+    private JSONObject junctionTableToAssociation(String junctionTable,
+                                                   DatabaseMetaData metaData,
+                                                   String catalog, String schema) throws SQLException
+    {
+        JSONObject association = new JSONObject();
+        association.put("type", "many-to-many");
+        association.put("junctionTable", junctionTable);
+
+        // Extract semantic name from table name
+        // e.g., "mymodule$customer_order" → "Customer_Order"
+        String name = junctionTable.substring(junctionTable.indexOf("$") + 1);
+        association.put("name", formatAssociationName(name));
+
+        // Get the two entities being associated
+        ResultSet fkRs = metaData.getImportedKeys(catalog, schema, junctionTable);
+        List<String> targets = new ArrayList<>();
+
+        try
+        {
+            while (fkRs.next())
+            {
+                targets.add(fkRs.getString("PKTABLE_NAME"));
+            }
+
+            if (targets.size() == 2)
+            {
+                association.put("entity1", targets.get(0));
+                association.put("entity2", targets.get(1));
+            }
+        }
+        finally
+        {
+            fkRs.close();
+        }
+
+        return association;
+    }
+
+    /**
+     * Format association name from table name
+     */
+    private String formatAssociationName(String name)
+    {
+        // Convert "customer_order" to "Customer_Order"
+        String[] parts = name.split("_");
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < parts.length; i++)
+        {
+            if (i > 0) result.append("_");
+            if (parts[i].length() > 0)
+            {
+                result.append(Character.toUpperCase(parts[i].charAt(0)));
+                result.append(parts[i].substring(1));
+            }
+        }
+
+        return result.toString();
     }
 }

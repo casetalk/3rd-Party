@@ -42,14 +42,17 @@ public class ExportMendixMetadata extends CustomJavaAction<String>
     @Override
     public String executeAction() throws Exception
     {
-        Connection conn = null;
         try
         {
-            // Get database connection from Mendix runtime
-            conn = Core.getDataSourceConnection();
-
-            // Generate jcatalog JSON
-            JSONObject jcatalog = generateJCatalog(conn);
+            // ✅ FIXED: Use Core.dataStorage().executeWithConnection() - the CORRECT Mendix API
+            // Source: https://apidocs.rnd.mendix.com/7/runtime/com/mendix/datastorage/DataStorage.html
+            JSONObject jcatalog = Core.dataStorage().executeWithConnection(getContext(), connection -> {
+                try {
+                    return generateJCatalog(connection);
+                } catch (SQLException e) {
+                    throw new RuntimeException("Failed to generate jcatalog", e);
+                }
+            });
 
             // Write to file
             String filePath = outputPath;
@@ -69,21 +72,8 @@ public class ExportMendixMetadata extends CustomJavaAction<String>
         {
             throw new Exception("Failed to export Mendix metadata: " + e.getMessage(), e);
         }
-        finally
-        {
-            if (conn != null)
-            {
-                try
-                {
-                    conn.close();
-                }
-                catch (SQLException e)
-                {
-                    // Log but don't throw
-                    Core.getLogger("ExportMendixMetadata").error("Failed to close connection", e);
-                }
-            }
-        }
+        // Note: Connection is automatically managed by Core.dataStorage().executeWithConnection()
+        // No need to close manually
     }
 
     /**
@@ -154,7 +144,7 @@ public class ExportMendixMetadata extends CustomJavaAction<String>
                     String tableName = tableRs.getString("TABLE_NAME");
 
                     // Filter out system tables unless explicitly requested
-                    if (!includeSystemTables && isSystemTable(tableName)) {
+                    if (!includeSystemTables && (isSystemTable(tableName) || isMendixSystemTable(tableName))) {
                         continue;
                     }
 
@@ -372,6 +362,40 @@ public class ExportMendixMetadata extends CustomJavaAction<String>
                lower.startsWith("msrep") ||
                lower.startsWith("dt") ||
                lower.startsWith("$");
+    }
+
+    /**
+     * Check if table is a Mendix-specific system table
+     * Enhanced filtering for Mendix system and technical modules
+     */
+    private boolean isMendixSystemTable(String tableName)
+    {
+        if (tableName == null) return false;
+
+        String lower = tableName.toLowerCase();
+
+        // Mendix system module (authentication, sessions, users, etc.)
+        if (lower.startsWith("system$")) return true;
+
+        // Mendix administration module
+        if (lower.startsWith("administration$")) return true;
+
+        // Common technical modules from Mendix Marketplace
+        String[] techModules = {
+            "mx",                    // Mendix internal
+            "deeplink$",            // Deep link module
+            "encryption$",          // Encryption module
+            "email$",               // Email connector
+            "audittrail$",          // Audit trail module
+            "modelreflection$",     // Model reflection module
+            "communitycommons$"     // Community commons
+        };
+
+        for (String module : techModules) {
+            if (lower.startsWith(module)) return true;
+        }
+
+        return false;
     }
 
     /**
